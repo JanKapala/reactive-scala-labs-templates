@@ -28,6 +28,7 @@ class CartActor extends Actor {
   val cartTimerDuration: FiniteDuration = 5 seconds
 
   private def scheduleTimer: Cancellable = context.system.scheduler.scheduleOnce(cartTimerDuration, self, ExpireCart)
+
   def receive: Receive = empty
 
   def empty: Receive = LoggingReceive {
@@ -52,7 +53,7 @@ class CartActor extends Actor {
           context become empty
         }
       } else {
-        log.info(s"Attempt of removing of the item from the empty cart")
+        log.info(s"An Attempt of removing of the item from the empty cart")
       }
 
     case StartCheckout =>
