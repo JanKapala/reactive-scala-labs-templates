@@ -1,6 +1,16 @@
 package EShop.lab2
 
-import EShop.lab2.Checkout.{Data, Uninitialized}
+import EShop.lab2.Checkout.{
+  CancelCheckout,
+  Data,
+  ExpireCheckout,
+  ExpirePayment,
+  ReceivePayment,
+  SelectDeliveryMethod,
+  SelectPayment,
+  StartCheckout,
+  Uninitialized
+}
 import EShop.lab2.CheckoutFSM.Status
 import akka.actor.{ActorRef, LoggingFSM, Props}
 
@@ -31,27 +41,57 @@ class CheckoutFSM(cartActor: ActorRef) extends LoggingFSM[Status.Value, Data] {
   startWith(NotStarted, Uninitialized)
 
   when(NotStarted) {
-    ???
+    case Event(StartCheckout, s) =>
+      setTimer("checkoutTimer", ExpireCheckout, checkoutTimerDuration, repeat = false)
+      goto(SelectingDelivery).using(s)
   }
 
   when(SelectingDelivery) {
-    ???
+    case Event(SelectDeliveryMethod(method), s) =>
+      goto(SelectingPaymentMethod).using(s)
+
+    case Event(CancelCheckout, s) =>
+      cancelTimer("checkoutTimer")
+      goto(Cancelled).using(s)
+
+    case Event(ExpireCheckout, s) =>
+      goto(Cancelled).using(s)
   }
 
   when(SelectingPaymentMethod) {
-    ???
+    case Event(SelectPayment(payment), s) =>
+      cancelTimer("checkoutTimer")
+      setTimer("paymentTimer", ExpirePayment, paymentTimerDuration, repeat = false)
+      goto(ProcessingPayment).using(s)
+
+    case Event(CancelCheckout, s) =>
+      cancelTimer("checkoutTimer")
+      goto(Cancelled).using(s)
+
+    case Event(ExpireCheckout, s) =>
+      goto(Cancelled).using(s)
   }
 
   when(ProcessingPayment) {
-    ???
+    case Event(ReceivePayment, s) =>
+      cancelTimer("paymentTimer")
+      goto(Closed).using(s)
+
+    case Event(CancelCheckout, s) =>
+      cancelTimer("paymentTimer")
+      goto(Cancelled).using(s)
+
+    case Event(ExpirePayment, s) =>
+      goto(Cancelled).using(s)
   }
 
   when(Cancelled) {
-    ???
+    case Event(StartCheckout, s) =>
+      goto(SelectingDelivery).using(s)
   }
 
   when(Closed) {
-    ???
+    case Event(StartCheckout, s) =>
+      goto(SelectingDelivery).using(s)
   }
-
 }
