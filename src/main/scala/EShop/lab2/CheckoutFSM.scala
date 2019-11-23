@@ -1,6 +1,16 @@
 package EShop.lab2
 
-import EShop.lab2.Checkout.{CancelCheckout, Data, ExpireCheckout, ExpirePayment, ReceivePayment, SelectDeliveryMethod, SelectPayment, StartCheckout, Uninitialized}
+import EShop.lab2.Checkout.{
+  CancelCheckout,
+  Data,
+  ExpireCheckout,
+  ExpirePayment,
+  ReceivePayment,
+  SelectDeliveryMethod,
+  SelectPayment,
+  StartCheckout,
+  Uninitialized
+}
 import EShop.lab2.CheckoutFSM.Status
 import akka.actor.{ActorRef, LoggingFSM, Props}
 
@@ -32,7 +42,7 @@ class CheckoutFSM extends LoggingFSM[Status.Value, Data] {
 
   when(NotStarted) {
     case Event(StartCheckout, s) =>
-      setTimer("checkoutTimer", ExpireCheckout, checkoutTimerDuration, false)
+      setTimer("checkoutTimer", ExpireCheckout, checkoutTimerDuration, repeat = false)
       goto(SelectingDelivery).using(s)
   }
 
@@ -51,7 +61,7 @@ class CheckoutFSM extends LoggingFSM[Status.Value, Data] {
   when(SelectingPaymentMethod) {
     case Event(SelectPayment(payment), s) =>
       cancelTimer("checkoutTimer")
-      setTimer("paymentTimer", ExpirePayment, paymentTimerDuration, false)
+      setTimer("paymentTimer", ExpirePayment, paymentTimerDuration, repeat = false)
       goto(ProcessingPayment).using(s)
 
     case Event(CancelCheckout, s) =>

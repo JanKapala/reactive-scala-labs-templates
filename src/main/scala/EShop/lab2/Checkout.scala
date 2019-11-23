@@ -3,6 +3,7 @@ package EShop.lab2
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.event.{Logging, LoggingReceive}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -37,10 +38,10 @@ class Checkout extends Actor {
   private val log       = Logging(context.system, this)
 
   val checkoutTimerDuration: FiniteDuration = 1 seconds
-  val paymentTimerDuration: FiniteDuration = 1 seconds
+  val paymentTimerDuration: FiniteDuration  = 1 seconds
 
-  private def scheduleCheckoutTimer : Cancellable = scheduler.scheduleOnce(checkoutTimerDuration, self, ExpireCheckout)
-  private def schedulePaymentTimer : Cancellable = scheduler.scheduleOnce(paymentTimerDuration, self, ExpirePayment)
+  private def scheduleCheckoutTimer: Cancellable = scheduler.scheduleOnce(checkoutTimerDuration, self, ExpireCheckout)
+  private def schedulePaymentTimer: Cancellable  = scheduler.scheduleOnce(paymentTimerDuration, self, ExpirePayment)
 
   def receive: Receive = LoggingReceive {
     case StartCheckout =>
@@ -69,6 +70,9 @@ class Checkout extends Actor {
     case CancelCheckout =>
       timer.cancel()
       log.info(s"Cancel checkout")
+      context become cancelled
+    case ExpireCheckout =>
+      log.info("Expire checkout")
       context become cancelled
 
   }

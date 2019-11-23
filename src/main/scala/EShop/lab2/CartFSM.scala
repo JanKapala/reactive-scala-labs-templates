@@ -38,10 +38,10 @@ class CartFSM extends LoggingFSM[Status.Value, Cart] {
       stay.using(cart.addItem(item))
 
     case Event(RemoveItem(item), cart) =>
-      if(cart.contains(item)){
+      if (cart.contains(item)) {
         val newCart = cart.removeItem(item)
         log.info(s"Remove item $item from the cart")
-        if(newCart.size != 0){
+        if (newCart.size != 0) {
           stay.using(newCart)
         } else {
           goto(Empty).using(newCart)

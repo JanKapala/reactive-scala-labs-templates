@@ -3,6 +3,7 @@ package EShop.lab2
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.event.{Logging, LoggingReceive}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -24,7 +25,7 @@ object CartActor {
 
 class CartActor extends Actor {
   import CartActor._
-  private val log       = Logging(context.system, this)
+  private val log                       = Logging(context.system, this)
   val cartTimerDuration: FiniteDuration = 5 seconds
 
   private def scheduleTimer: Cancellable = context.system.scheduler.scheduleOnce(cartTimerDuration, self, ExpireCart)
@@ -43,10 +44,10 @@ class CartActor extends Actor {
       context become nonEmpty(cart.addItem(item), timer)
 
     case RemoveItem(item) =>
-      if(cart.contains(item)) {
+      if (cart.contains(item)) {
         val newCart = cart.removeItem(item)
         log.info(s"Remove an item $item from the cart")
-        if(newCart.size != 0){
+        if (newCart.size != 0) {
           context become nonEmpty(newCart, timer)
         } else {
           timer.cancel()
