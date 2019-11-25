@@ -40,8 +40,7 @@ class CartFSM extends LoggingFSM[Status.Value, Cart] {
         if (newCart.size != 0) {
           log.debug("Item " + item + " removed from the cart (becoming empty)")
           stay.using(newCart)
-        }
-        else {
+        } else {
           log.debug("Item " + item + " removed from the cart")
           goto(Empty).using(newCart)
         }

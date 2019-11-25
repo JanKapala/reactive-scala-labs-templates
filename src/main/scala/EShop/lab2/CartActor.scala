@@ -28,7 +28,7 @@ class CartActor extends Actor {
 
   import CartActor._
 
-  private val log = Logging(context.system, this)
+  private val log       = Logging(context.system, this)
   val cartTimerDuration = 5 seconds
 
   private def scheduleTimer: Cancellable = context.system.scheduler.scheduleOnce(cartTimerDuration, self, ExpireCart)
@@ -51,8 +51,7 @@ class CartActor extends Actor {
         if (newCart.size != 0) {
           log.debug("Item " + item + " removed from the cart (becoming empty)")
           context become nonEmpty(newCart, timer)
-        }
-        else {
+        } else {
           timer.cancel()
           log.debug("Item " + item + " removed from the cart")
           context become empty
