@@ -1,6 +1,6 @@
 package EShop.lab2
 
-import EShop.lab2.CartActor.{AddItem, CancelCheckout, CloseCheckout, RemoveItem, StartCheckout}
+import EShop.lab2.CartActor._
 import EShop.lab2.CartFSM.Status
 import akka.actor.{LoggingFSM, Props}
 
@@ -20,6 +20,7 @@ object CartFSM {
 class CartFSM extends LoggingFSM[Status.Value, Cart] {
   import EShop.lab2.CartFSM.Status._
 
+  // useful for debugging, see: https://doc.akka.io/docs/akka/current/fsm.html#rolling-event-log
   override def logDepth = 12
 
   val cartTimerDuration: FiniteDuration = 1 seconds
@@ -28,45 +29,50 @@ class CartFSM extends LoggingFSM[Status.Value, Cart] {
 
   when(Empty) {
     case Event(AddItem(item), cart) =>
-      log.info(s"Add item $item to the cart")
+      log.debug("Item " + item + " added to the cart (becoming nonEmpty)")
       goto(NonEmpty).using(cart.addItem(item))
   }
 
   when(NonEmpty, stateTimeout = cartTimerDuration) {
-    case Event(AddItem(item), cart) =>
-      log.info(s"Add an item $item to the cart")
-      stay.using(cart.addItem(item))
-
     case Event(RemoveItem(item), cart) =>
       if (cart.contains(item)) {
         val newCart = cart.removeItem(item)
-        log.info(s"Remove item $item from the cart")
         if (newCart.size != 0) {
+          log.debug("Item " + item + " removed from the cart (becoming empty)")
           stay.using(newCart)
-        } else {
+        }
+        else {
+          log.debug("Item " + item + " removed from the cart")
           goto(Empty).using(newCart)
         }
       } else {
-        log.info(s"An Attempt of removing of the item from the empty cart")
+        log.debug("Trying to remove " + item + ", that is not in the cart")
         stay.using(cart)
       }
 
+    case Event(AddItem(item), cart) =>
+      log.debug("Item " + item + " added to the cart")
+      stay.using(cart.addItem(item))
+
     case Event(StartCheckout, cart) =>
-      log.info("Start checkout")
+      log.debug("Starting checkout (becoming inCheckout)")
+      val checkoutActor = context.system.actorOf(CheckoutFSM.props(self))
+      checkoutActor ! Checkout.StartCheckout
+      sender() ! CheckoutStarted(checkoutActor)
       goto(InCheckout).using(cart)
 
     case Event(StateTimeout, _) =>
-      log.info("Cart expires")
+      log.debug("Time out (becoming empty)")
       goto(Empty).using(Cart.empty)
   }
 
   when(InCheckout) {
     case Event(CancelCheckout, cart) =>
-      log.debug("Cancel checkout")
+      log.debug("Canceling checkout (becoming nonEmpty)")
       goto(NonEmpty).using(cart)
 
     case Event(CloseCheckout, _) =>
-      log.debug("Close checkout")
+      log.debug("Closing checkout (becoming empty)")
       goto(Empty).using(Cart.empty)
   }
 }

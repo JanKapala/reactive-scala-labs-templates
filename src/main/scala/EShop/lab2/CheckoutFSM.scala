@@ -1,19 +1,11 @@
 package EShop.lab2
 
-import EShop.lab2.Checkout.{
-  CancelCheckout,
-  Data,
-  ExpireCheckout,
-  ExpirePayment,
-  ReceivePayment,
-  SelectDeliveryMethod,
-  SelectPayment,
-  StartCheckout,
-  Uninitialized
-}
+import EShop.lab2.Checkout.{CancelCheckout, Data, ExpireCheckout, ExpirePayment, PaymentStarted, ReceivePayment, SelectDeliveryMethod, SelectPayment, StartCheckout, Uninitialized}
 import EShop.lab2.CheckoutFSM.Status
+import EShop.lab3.{Payment, PaymentFSM}
 import akka.actor.{ActorRef, LoggingFSM, Props}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -42,7 +34,7 @@ class CheckoutFSM(cartActor: ActorRef) extends LoggingFSM[Status.Value, Data] {
 
   when(NotStarted) {
     case Event(StartCheckout, s) =>
-      setTimer("checkoutTimer", ExpireCheckout, checkoutTimerDuration, repeat = false)
+      setTimer("checkoutTimer", ExpireCheckout, checkoutTimerDuration, false)
       goto(SelectingDelivery).using(s)
   }
 
@@ -61,7 +53,9 @@ class CheckoutFSM(cartActor: ActorRef) extends LoggingFSM[Status.Value, Data] {
   when(SelectingPaymentMethod) {
     case Event(SelectPayment(payment), s) =>
       cancelTimer("checkoutTimer")
-      setTimer("paymentTimer", ExpirePayment, paymentTimerDuration, repeat = false)
+      val paymentActor = context.system.actorOf(PaymentFSM.props(payment, sender(), self))
+      sender() ! PaymentStarted(paymentActor)
+      setTimer("paymentTimer", ExpirePayment, paymentTimerDuration, false)
       goto(ProcessingPayment).using(s)
 
     case Event(CancelCheckout, s) =>
@@ -75,6 +69,7 @@ class CheckoutFSM(cartActor: ActorRef) extends LoggingFSM[Status.Value, Data] {
   when(ProcessingPayment) {
     case Event(ReceivePayment, s) =>
       cancelTimer("paymentTimer")
+      cartActor ! CartActor.CloseCheckout
       goto(Closed).using(s)
 
     case Event(CancelCheckout, s) =>
