@@ -25,9 +25,11 @@ object CartActor {
 }
 
 class CartActor extends Actor {
+
   import CartActor._
-  private val log                       = Logging(context.system, this)
-  val cartTimerDuration: FiniteDuration = 5 seconds
+
+  private val log = Logging(context.system, this)
+  val cartTimerDuration = 5 seconds
 
   private def scheduleTimer: Cancellable = context.system.scheduler.scheduleOnce(cartTimerDuration, self, ExpireCart)
 
@@ -35,45 +37,57 @@ class CartActor extends Actor {
 
   def empty: Receive = LoggingReceive {
     case AddItem(item) =>
-      log.info(s"Add an item $item to the cart")
+      log.debug("Item " + item + " added to the cart (becoming nonEmpty)")
       context become nonEmpty(Cart.empty.addItem(item), scheduleTimer)
+
+    case GetItems =>
+      sender() ! Seq.empty[Any]
   }
 
   def nonEmpty(cart: Cart, timer: Cancellable): Receive = LoggingReceive {
-    case AddItem(item) =>
-      log.info(s"Add an item $item to the cart")
-      context become nonEmpty(cart.addItem(item), timer)
-
     case RemoveItem(item) =>
       if (cart.contains(item)) {
         val newCart = cart.removeItem(item)
-        log.info(s"Remove an item $item from the cart")
         if (newCart.size != 0) {
+          log.debug("Item " + item + " removed from the cart (becoming empty)")
           context become nonEmpty(newCart, timer)
-        } else {
+        }
+        else {
           timer.cancel()
+          log.debug("Item " + item + " removed from the cart")
           context become empty
         }
       } else {
-        log.info(s"An Attempt of removing of the item from the empty cart")
+        log.debug("Trying to remove " + item + ", that is not in the cart")
       }
+
+    case AddItem(item) =>
+      log.debug("Item " + item + " added to the cart")
+      context become nonEmpty(cart.addItem(item), timer)
 
     case StartCheckout =>
       timer.cancel()
-      log.info("Start checkout")
+      log.debug("Starting checkout (becoming inCheckout)")
+      val checkoutActor = context.system.actorOf(Checkout.props(self))
+      checkoutActor ! Checkout.StartCheckout
+      sender() ! CheckoutStarted(checkoutActor)
       context become inCheckout(cart)
 
     case ExpireCart =>
-      log.info("Cart expires")
+      log.debug("Time out (becoming empty)")
       context become empty
+
+    case GetItems =>
+      sender() ! cart.items
   }
 
   def inCheckout(cart: Cart): Receive = LoggingReceive {
     case CancelCheckout =>
-      log.info("Cancel checkout")
+      log.debug("Canceling checkout (becoming nonEmpty)")
       context become nonEmpty(cart, scheduleTimer)
+
     case CloseCheckout =>
-      log.info("Close checkout")
+      log.debug("Closing checkout (becoming empty)")
       context become empty
   }
 }
