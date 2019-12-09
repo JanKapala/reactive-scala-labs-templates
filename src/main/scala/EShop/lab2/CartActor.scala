@@ -75,7 +75,7 @@ class CartActor extends Actor {
       log.debug("Starting checkout (becoming inCheckout)")
       val checkoutActor = context.system.actorOf(Checkout.props(self))
       checkoutActor ! Checkout.StartCheckout
-      sender() ! CheckoutStarted(checkoutActor)
+      sender() ! CheckoutStarted(checkoutActor, cart)
       context become inCheckout(cart)
 
     case ExpireCart =>
