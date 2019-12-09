@@ -57,7 +57,7 @@ class CartFSM extends LoggingFSM[Status.Value, Cart] {
       log.debug("Starting checkout (becoming inCheckout)")
       val checkoutActor = context.system.actorOf(CheckoutFSM.props(self))
       checkoutActor ! Checkout.StartCheckout
-      sender() ! CheckoutStarted(checkoutActor)
+      sender() ! CheckoutStarted(checkoutActor, cart)
       goto(InCheckout).using(cart)
 
     case Event(StateTimeout, _) =>
