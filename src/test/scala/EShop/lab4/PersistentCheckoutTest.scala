@@ -1,7 +1,7 @@
 package EShop.lab4
 
 import EShop.lab2.Checkout._
-import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{ActorRef, ActorSystem, Cancellable, Kill, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike}
 
@@ -42,6 +42,7 @@ class PersistentCheckoutTest
     checkoutActor ! StartCheckout
     expectMsg(selectingDeliveryMsg)
     //restart actor
+    checkoutActor ! Kill
     val checkoutActorAfterRestart: ActorRef = checkoutActorWithResponseOnStateChange(system)(cartActor, id)
     checkoutActorAfterRestart ! CancelCheckout
     expectMsg(cancelledMsg)
@@ -69,6 +70,7 @@ class PersistentCheckoutTest
     checkoutActor ! StartCheckout
     expectMsg(selectingDeliveryMsg)
     //restart actor
+    checkoutActor ! Kill
     val checkoutActorAfterRestart: ActorRef = checkoutActorWithResponseOnStateChange(system)(cartActor, id)
     checkoutActorAfterRestart ! SelectDeliveryMethod(deliveryMethod)
     expectMsg(selectingPaymentMethodMsg)
@@ -83,6 +85,7 @@ class PersistentCheckoutTest
     checkoutActor ! SelectDeliveryMethod(deliveryMethod)
     expectMsg(selectingPaymentMethodMsg)
     //restart actor
+    checkoutActor ! Kill
     val checkoutActorAfterRestart: ActorRef = checkoutActorWithResponseOnStateChange(system)(cartActor, id)
     checkoutActorAfterRestart ! CancelCheckout
     expectMsg(cancelledMsg)
@@ -113,6 +116,7 @@ class PersistentCheckoutTest
     checkoutActor ! SelectDeliveryMethod(deliveryMethod)
     expectMsg(selectingPaymentMethodMsg)
     //restart actor
+    checkoutActor ! Kill
     val checkoutActorAfterRestart: ActorRef = checkoutActorWithResponseOnStateChange(system)(cartActor, id)
     checkoutActorAfterRestart ! SelectPayment(paymentMethod)
     fishForMessage() {
@@ -135,6 +139,7 @@ class PersistentCheckoutTest
       case _: PaymentStarted                      => false
     }
     //restart actor
+    checkoutActor ! Kill
     val checkoutActorAfterRestart: ActorRef = checkoutActorWithResponseOnStateChange(system)(cartActor, id)
     checkoutActorAfterRestart ! CancelCheckout
     expectMsg(cancelledMsg)
@@ -174,6 +179,7 @@ class PersistentCheckoutTest
       case _: PaymentStarted                      => false
     }
     //restart actor
+    checkoutActor ! Kill
     val checkoutActorAfterRestart: ActorRef = checkoutActorWithResponseOnStateChange(system)(cartActor, id)
     checkoutActorAfterRestart ! ReceivePayment
     expectMsg(closedMsg)
@@ -195,6 +201,7 @@ class PersistentCheckoutTest
     checkoutActor ! ReceivePayment
     expectMsg(closedMsg)
     //restart actor
+    checkoutActor ! Kill
     val checkoutActorAfterRestart: ActorRef = checkoutActorWithResponseOnStateChange(system)(cartActor, id)
     checkoutActorAfterRestart ! CancelCheckout
     expectNoMessage()
